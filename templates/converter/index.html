@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>회의에서 살아남기</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+  <style>
+    :root {
+      --red: #ff2222;
+      --red-dark: #cc0000;
+      --red-bright: #ff4444;
+      --bg: #0d1224;
+      --bg2: #111830;
+      --bg3: #1a2240;
+      --border: #2a3560;
+      --text: #f0f0f0;
+      --text-dim: #666666;
+      --yellow: #ffdd00;
+      --green: #00ff44;
+      --cyan: #00ffff;
+      --pixel: 4px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* 픽셀 커서 */
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Pretendard', sans-serif;
+      min-height: 100vh;
+      image-rendering: pixelated;
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect x='0' y='0' width='4' height='4' fill='%23ff2222'/%3E%3Crect x='4' y='4' width='4' height='4' fill='%23ff2222'/%3E%3Crect x='8' y='8' width='4' height='4' fill='%23ff2222'/%3E%3Crect x='0' y='4' width='4' height='4' fill='%23ff2222'/%3E%3Crect x='0' y='8' width='4' height='4' fill='%23ff2222'/%3E%3C/svg%3E") 0 0, crosshair;
+    }
+
+    /* 픽셀 스캔라인 오버레이 */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.15) 2px,
+        rgba(0,0,0,0.15) 4px
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* CRT 글로우 효과 */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(255,34,34,0.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 16px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── HEADER ── */
+    header {
+      padding: 40px 0 32px;
+      text-align: center;
+    }
+
+    .pixel-logo {
+      display: inline-block;
+      margin-bottom: 20px;
+    }
+
+    /* 픽셀아트 로고 SVG */
+    .pixel-logo svg {
+      image-rendering: pixelated;
+      filter: drop-shadow(0 0 8px var(--red));
+    }
+
+    .game-title {
+      font-size: clamp(22px, 5vw, 38px);
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      margin-bottom: 8px;
+      /* 픽셀 텍스트 그림자 */
+      text-shadow:
+        2px 0 0 var(--red-dark),
+        -2px 0 0 var(--red-dark),
+        0 2px 0 var(--red-dark),
+        0 -2px 0 var(--red-dark),
+        4px 4px 0 rgba(255,0,0,0.3);
+      color: #fff;
+    }
+
+    .game-title .red { color: var(--red); }
+
+    .level-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--red);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      padding: 4px 12px 4px 8px;
+      /* 픽셀 버튼 스타일 */
+      clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
+      margin-bottom: 12px;
+      animation: blink 2s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    /* HP 바 스타일 장식 */
+    .hp-bar-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .hp-bar {
+      width: 120px;
+      height: 10px;
+      background: var(--bg3);
+      border: 2px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hp-fill {
+      height: 100%;
+      width: 73%;
+      background: var(--red);
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.2);
+    }
+
+    /* ── PIXEL CARD ── */
+    .card {
+      background: var(--bg2);
+      border: 2px solid var(--border);
+      /* 픽셀 코너 */
+      clip-path: polygon(
+        0 8px, 8px 0,
+        calc(100% - 8px) 0, 100% 8px,
+        100% calc(100% - 8px), calc(100% - 8px) 100%,
+        8px 100%, 0 calc(100% - 8px)
+      );
+      padding: 24px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--red);
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-label::before {
+      content: '▶';
+      font-size: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      padding: 14px;
+      color: var(--text);
+      font-family: 'Pretendard', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.75;
+      resize: vertical;
+      min-height: 110px;
+      outline: none;
+      transition: border-color 0.1s;
+      clip-path: polygon(
+        0 4px, 4px 0,
+        calc(100% - 4px) 0, 100% 4px,
+        100% calc(100% - 4px), calc(100% - 4px) 100%,
+        4px 100%, 0 calc(100% - 4px)
+      );
+    }
+
+    textarea:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 1px var(--red), inset 0 0 20px rgba(255,34,34,0.05);
+    }
+
+    textarea::placeholder { color: var(--text-dim); }
+
+    /* ── TONE BUTTONS ── */
+    .tone-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .tone-btn {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      padding: 14px 12px;
+      cursor: pointer;
+      text-align: left;
+      color: var(--text);
+      font-family: 'Pretendard', sans-serif;
+      transition: all 0.1s;
+      position: relative;
+      clip-path: polygon(
+        0 4px, 4px 0,
+        calc(100% - 4px) 0, 100% 4px,
+        100% calc(100% - 4px), calc(100% - 4px) 100%,
+        4px 100%, 0 calc(100% - 4px)
+      );
+    }
+
+    .tone-btn:hover {
+      border-color: var(--red);
+      background: rgba(255,34,34,0.06);
+      transform: translate(-2px, -2px);
+      box-shadow: 2px 2px 0 var(--red-dark);
+    }
+
+    .tone-btn.active {
+      border-color: var(--red);
+      background: rgba(255,34,34,0.1);
+      box-shadow: 2px 2px 0 var(--red-dark), inset 0 0 20px rgba(255,34,34,0.05);
+    }
+
+    .tone-btn.active::after {
+      content: '◀ SELECT';
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 9px;
+      font-weight: 800;
+      color: var(--red);
+      letter-spacing: 1px;
+      animation: blink 1s step-end infinite;
+    }
+
+    .tone-title {
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 3px;
+      letter-spacing: -0.3px;
+    }
+
+    .tone-desc {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    /* ── CONVERT BUTTON ── */
+    .convert-btn {
+      width: 100%;
+      background: var(--red);
+      border: none;
+      padding: 18px;
+      color: #fff;
+      font-family: 'Pretendard', sans-serif;
+      font-size: 15px;
+      font-weight: 900;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 4px;
+      position: relative;
+      clip-path: polygon(
+        0 6px, 6px 0,
+        calc(100% - 6px) 0, 100% 6px,
+        100% calc(100% - 6px), calc(100% - 6px) 100%,
+        6px 100%, 0 calc(100% - 6px)
+      );
+      transition: all 0.1s;
+      text-shadow: 1px 1px 0 var(--red-dark);
+    }
+
+    .convert-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .convert-btn:hover:not(:disabled) {
+      background: var(--red-bright);
+      transform: translate(-3px, -3px);
+      box-shadow: 3px 3px 0 var(--red-dark), 6px 6px 0 rgba(255,0,0,0.2);
+    }
+
+    .convert-btn:active:not(:disabled) {
+      transform: translate(0, 0);
+      box-shadow: none;
+    }
+
+    .convert-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ── RESULTS ── */
+    #result-section { display: none; }
+    #result-section.visible {
+      display: block;
+      animation: slideIn 0.3s steps(6) forwards;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .tone-tag {
+      background: transparent;
+      color: var(--red);
+      border: 2px solid var(--red);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 10px;
+      letter-spacing: 1px;
+      clip-path: polygon(0 3px, 3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px));
+    }
+
+    .result-item {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      padding: 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      clip-path: polygon(
+        0 4px, 4px 0,
+        calc(100% - 4px) 0, 100% 4px,
+        100% calc(100% - 4px), calc(100% - 4px) 100%,
+        4px 100%, 0 calc(100% - 4px)
+      );
+      transition: all 0.1s;
+    }
+
+    .result-item:hover {
+      border-color: var(--red);
+      transform: translate(-2px, -2px);
+      box-shadow: 2px 2px 0 var(--red-dark);
+    }
+
+    .result-num {
+      font-size: 11px;
+      font-weight: 900;
+      color: var(--red);
+      min-width: 28px;
+      padding-top: 2px;
+      letter-spacing: 1px;
+    }
+
+    .result-text {
+      flex: 1;
+      font-size: 13px;
+      line-height: 1.8;
+      font-weight: 500;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 2px solid var(--border);
+      padding: 5px 10px;
+      color: var(--text-dim);
+      font-family: 'Pretendard', sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      clip-path: polygon(0 3px, 3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px));
+      transition: all 0.1s;
+    }
+
+    .copy-btn:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      box-shadow: 1px 1px 0 rgba(0,255,255,0.3);
+    }
+
+    .copy-btn.copied {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* ── SCORES ── */
+    .scores-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .score-item {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      padding: 16px 10px;
+      text-align: center;
+      clip-path: polygon(
+        0 4px, 4px 0,
+        calc(100% - 4px) 0, 100% 4px,
+        100% calc(100% - 4px), calc(100% - 4px) 100%,
+        4px 100%, 0 calc(100% - 4px)
+      );
+    }
+
+    .score-emoji { font-size: 20px; margin-bottom: 6px; }
+
+    .score-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      line-height: 1.4;
+      letter-spacing: -0.2px;
+    }
+
+    /* 픽셀 게이지 바 */
+    .score-bar-wrap {
+      background: var(--bg3);
+      border: 2px solid var(--border);
+      height: 10px;
+      margin-bottom: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .score-bar {
+      height: 100%;
+      width: 0%;
+      transition: width 1s steps(20);
+      position: relative;
+    }
+
+    .score-bar::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 4px;
+      height: 100%;
+      background: rgba(255,255,255,0.5);
+      animation: gauge-flicker 0.5s step-end infinite;
+    }
+
+    @keyframes gauge-flicker {
+      50% { opacity: 0; }
+    }
+
+    .score-value {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 32px 0 0;
+      color: var(--text-dim);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    footer a {
+      color: var(--red);
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    .footer-pixel {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+
+    .footer-pixel span {
+      display: block;
+      width: 6px;
+      height: 6px;
+      background: var(--border);
+    }
+
+    .footer-pixel span:nth-child(3) { background: var(--red); }
+
+    /* ── LOADING ── */
+    .pixel-loading {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .pixel-loading span {
+      display: block;
+      width: 8px;
+      height: 8px;
+      background: #fff;
+      animation: pixel-bounce 0.8s steps(1) infinite;
+    }
+
+    .pixel-loading span:nth-child(2) { animation-delay: 0.2s; }
+    .pixel-loading span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pixel-bounce {
+      0%, 100% { transform: translateY(0); background: rgba(255,255,255,0.3); }
+      50% { transform: translateY(-6px); background: #fff; }
+    }
+
+    @media (max-width: 480px) {
+      .tone-grid { grid-template-columns: 1fr; }
+      .scores-grid { grid-template-columns: 1fr; }
+      .tone-btn.active::after { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <!-- 픽셀아트 로고 -->
+    <div class="pixel-logo">
+      <svg width="80" height="48" viewBox="0 0 80 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- 픽셀 캐릭터 (직장인) -->
+        <!-- 머리 -->
+        <rect x="28" y="4" width="24" height="20" fill="#ffcc99"/>
+        <!-- 머리카락 -->
+        <rect x="28" y="4" width="24" height="6" fill="#222"/>
+        <rect x="28" y="4" width="4" height="10" fill="#222"/>
+        <!-- 눈 -->
+        <rect x="33" y="14" width="4" height="4" fill="#222"/>
+        <rect x="43" y="14" width="4" height="4" fill="#222"/>
+        <!-- 입 (일자) -->
+        <rect x="33" y="20" width="14" height="2" fill="#cc6666"/>
+        <!-- 몸 (양복) -->
+        <rect x="24" y="24" width="32" height="20" fill="#cc0000"/>
+        <!-- 넥타이 -->
+        <rect x="36" y="24" width="8" height="16" fill="#880000"/>
+        <rect x="37" y="38" width="6" height="4" fill="#880000"/>
+        <!-- 팔 -->
+        <rect x="14" y="24" width="10" height="16" fill="#cc0000"/>
+        <rect x="56" y="24" width="10" height="16" fill="#cc0000"/>
+        <!-- 손 -->
+        <rect x="12" y="38" width="8" height="6" fill="#ffcc99"/>
+        <rect x="60" y="38" width="8" height="6" fill="#ffcc99"/>
+        <!-- 글로우 효과 -->
+        <rect x="28" y="4" width="24" height="20" fill="url(#glow)" opacity="0.2"/>
+        <defs>
+          <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ff2222"/>
+            <stop offset="100%" stop-color="transparent"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="level-badge">▶ STAGE 1 · OFFICE BATTLE</div>
+    <h1 class="game-title">회의에서<br><span class="red">살아남기</span></h1>
+    <p class="subtitle">속마음을 정중한 비즈니스어로 변환하는<br>직장인 생존 RPG</p>
+
+    <div class="hp-bar-wrap">
+      <span>HP</span>
+      <div class="hp-bar"><div class="hp-fill"></div></div>
+      <span>73 / 100</span>
+      <span style="margin-left:8px">LV.3 직장인</span>
+    </div>
+  </header>
+
+  <!-- INPUT -->
+  <div class="card">
+    <div class="card-label">속마음 입력</div>
+    <textarea id="input-text" placeholder="지금 하고 싶은 말을 솔직하게 입력하세요&#10;예: 아니 그건 다음에 하기로 했잖아. 갑자기 왜 말 바꿔?"></textarea>
+  </div>
+
+  <!-- TONE -->
+  <div class="card">
+    <div class="card-label">말투 선택</div>
+    <div class="tone-grid">
+      <button class="tone-btn active" data-tone="soft">
+        <div class="tone-title">🌿 부드럽게</div>
+        <div class="tone-desc">갈등 없이 부드럽게 전달</div>
+      </button>
+      <button class="tone-btn" data-tone="firm">
+        <div class="tone-title">⚡ 단호하게</div>
+        <div class="tone-desc">할 말은 하되 프로답게</div>
+      </button>
+      <button class="tone-btn" data-tone="boss">
+        <div class="tone-title">🎩 상사 앞 버전</div>
+        <div class="tone-desc">눈치 보이는 그 상황에서</div>
+      </button>
+      <button class="tone-btn" data-tone="official">
+        <div class="tone-title">📋 회의록 버전</div>
+        <div class="tone-desc">공식 기록에 남겨도 OK</div>
+      </button>
+    </div>
+  </div>
+
+  <button class="convert-btn" id="convert-btn" onclick="doConvert()">
+    ▶ PRESS START — 회의어로 변환
+  </button>
+
+  <!-- RESULTS -->
+  <div id="result-section">
+    <div class="card">
+      <div class="result-header">
+        <div class="card-label" style="margin-bottom:0">변환 결과</div>
+        <span class="tone-tag" id="result-tone-tag"></span>
+      </div>
+      <div id="result-list"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">생존 분석 리포트</div>
+      <div class="scores-grid" id="scores-grid"></div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-pixel">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <p>© 2025 OFFICE SURVIVAL RPG &nbsp;|&nbsp; <a href="/admin/">ADMIN</a></p>
+    <p style="margin-top:6px; font-size:10px;">INSERT COIN TO CONTINUE</p>
+  </footer>
+</div>
+
+<script>
+  let selectedTone = 'soft';
+
+  document.querySelectorAll('.tone-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tone-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedTone = btn.dataset.tone;
+    });
+  });
+
+  async function doConvert() {
+    const text = document.getElementById('input-text').value.trim();
+    if (!text) {
+      alert('속마음을 먼저 입력하세요! [INSERT COIN]');
+      return;
+    }
+    const btn = document.getElementById('convert-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="pixel-loading"><span></span><span></span><span></span></span> LOADING...';
+
+    try {
+      const res = await fetch('/convert/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify({ text, tone: selectedTone }),
+      });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      renderResults(data);
+    } catch(e) {
+      alert('ERROR: 변환 중 오류가 발생했습니다.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '▶ PRESS START — 회의어로 변환';
+    }
+  }
+
+  function renderResults(data) {
+    document.getElementById('result-tone-tag').textContent = data.tone_label;
+
+    const list = document.getElementById('result-list');
+    list.innerHTML = '';
+    data.results.forEach((text, i) => {
+      const labels = ['P1', 'P2', 'P3'];
+      const item = document.createElement('div');
+      item.className = 'result-item';
+      item.innerHTML = `
+        <div class="result-num">${labels[i]}</div>
+        <div class="result-text">${escapeHtml(text)}</div>
+        <button class="copy-btn" onclick="copyText(this, \`${escapeJs(text)}\`)">COPY</button>
+      `;
+      list.appendChild(item);
+    });
+
+    const scores = data.scores;
+    const scoreItems = [
+      { emoji: '🧠', label: '속마음\n보존율', value: scores.inner_preservation, color: '#ff2222' },
+      { emoji: '🛡️', label: '사회생활\n안전도', value: scores.safety, color: '#00ffff' },
+      { emoji: '🎯', label: '회의\n생존 가능성', value: scores.survival, color: '#ffdd00' },
+    ];
+
+    const grid = document.getElementById('scores-grid');
+    grid.innerHTML = '';
+    scoreItems.forEach(s => {
+      grid.innerHTML += `
+        <div class="score-item">
+          <div class="score-emoji">${s.emoji}</div>
+          <div class="score-label">${s.label.replace('\n','<br>')}</div>
+          <div class="score-bar-wrap">
+            <div class="score-bar" style="background:${s.color}" data-target="${s.value}"></div>
+          </div>
+          <div class="score-value" style="color:${s.color}">${s.value}%</div>
+        </div>
+      `;
+    });
+
+    const section = document.getElementById('result-section');
+    section.classList.add('visible');
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    setTimeout(() => {
+      document.querySelectorAll('.score-bar').forEach(bar => {
+        bar.style.width = bar.dataset.target + '%';
+      });
+    }, 100);
+  }
+
+  function copyText(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'OK!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  function escapeHtml(t) {
+    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function escapeJs(t) {
+    return t.replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\$/g,'\\$');
+  }
+
+  function getCookie(name) {
+    let v = null;
+    document.cookie.split(';').forEach(c => {
+      const [k, val] = c.trim().split('=');
+      if (k === name) v = decodeURIComponent(val);
+    });
+    return v;
+  }
+
+  document.getElementById('input-text').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doConvert(); }
+  });
+</script>
+</body>
+</html>
