@@ -32,7 +32,14 @@
 
 ## 스크린샷
 
-<!-- 여기에 스크린샷 추가 -->
+<img width="933" height="832" alt="image" src="https://github.com/user-attachments/assets/1a44d0db-1784-4156-96cb-5fcd9c48035b" />
+<img width="1418" height="410" alt="image" src="https://github.com/user-attachments/assets/3d402e68-a4af-4943-abdf-7e7739cbc6de" />
+<img width="1376" height="1298" alt="image" src="https://github.com/user-attachments/assets/fe6a175a-7028-4dcf-af32-94af9f4cade1" />
+<img width="1452" height="468" alt="image" src="https://github.com/user-attachments/assets/edb455b9-128e-43c0-b542-664868a78ebc" />
+
+
+
+
 
 ---
 
